@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 # 加载MongoDB连接字符串
-load_dotenv(os.path.join(os.path.dirname(__file__), 'token.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '../token.env'))
 MONGO_URI = os.getenv('MONGO_URI')
 
 client = MongoClient(MONGO_URI)
