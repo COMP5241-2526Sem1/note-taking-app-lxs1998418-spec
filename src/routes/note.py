@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from src.models.note_mongo import Note, notes_collection
 from datetime import datetime
+from src.translate import translate_text
 
 note_bp = Blueprint('note', __name__)
 
@@ -77,4 +78,30 @@ def search_notes():
         ]
     }).sort('updated_at', -1)
     return jsonify([Note.from_dict(note).to_dict() for note in notes])
+
+
+@note_bp.route('/notes/<note_id>/translate', methods=['POST'])
+def translate_note(note_id):
+    """Translate a note's content to a target language.
+
+    Expects JSON body: { "target_language": "Spanish" }
+    Returns: { "id": ..., "translated": "..." }
+    """
+    from bson import ObjectId
+    data = request.json or {}
+    target_language = data.get('target_language')
+    if not target_language:
+        return jsonify({'error': 'target_language is required'}), 400
+
+    note = notes_collection.find_one({'_id': ObjectId(note_id)})
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+
+    try:
+        original = note.get('content', '')
+        # Call translation helper (may raise)
+        translated = translate_text(original, target_language)
+        return jsonify({'id': str(note.get('_id')), 'translated': translated})
+    except Exception as e:
+        return jsonify({'error': f'Failed to translate note: {str(e)}'}), 500
 

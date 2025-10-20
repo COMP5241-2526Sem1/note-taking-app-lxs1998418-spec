@@ -345,6 +345,7 @@
                     <h2 class="editor-title" id="editorTitle">Select a note to edit</h2>
                     <div class="editor-actions" id="editorActions" style="display: none;">
                         <button class="btn btn-save" id="saveBtn">💾 Save</button>
+                        <button class="btn" id="translateBtn" style="background:#007bff;color:white;">🌐 Translate</button>
                         <button class="btn btn-delete" id="deleteBtn">🗑️ Delete</button>
                     </div>
                 </div>
@@ -361,6 +362,11 @@
                         <label class="form-label" for="noteContent">Content</label>
                         <textarea class="form-textarea" id="noteContent" placeholder="Start writing your note..."></textarea>
                     </div>
+                </div>
+
+                <div id="translationArea" style="display:none; margin-top:16px;">
+                    <label class="form-label">Translated Text</label>
+                    <div id="translatedContent" style="white-space:pre-wrap; padding:12px; border:1px dashed #e1e5e9; border-radius:8px; background:#fff"></div>
                 </div>
 
                 <div class="empty-state" id="emptyState">
@@ -404,6 +410,11 @@
                 
                 document.getElementById('noteTitle').addEventListener('input', autoSave);
                 document.getElementById('noteContent').addEventListener('input', autoSave);
+                // Translate button
+                const translateBtn = document.getElementById('translateBtn');
+                if (translateBtn) {
+                    translateBtn.addEventListener('click', () => this.translateCurrentNote());
+                }
             }
 
             async loadNotes() {
@@ -569,6 +580,40 @@
                     this.showMessage('Note deleted successfully!', 'success');
                 } catch (error) {
                     this.showMessage(`Error deleting note: ${error.message}`, 'error');
+                }
+            }
+
+            async translateCurrentNote() {
+                if (!this.currentNote || !this.currentNote.id) {
+                    this.showMessage('Select a saved note to translate', 'error');
+                    return;
+                }
+
+                const target = prompt('Enter target language (e.g. Spanish, Chinese):', 'Spanish');
+                if (!target) return;
+
+                const translatedDiv = document.getElementById('translatedContent');
+                const translationArea = document.getElementById('translationArea');
+                translationArea.style.display = 'block';
+                translatedDiv.textContent = 'Translating...';
+
+                try {
+                    const res = await fetch(`/api/notes/${this.currentNote.id}/translate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ target_language: target })
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || 'Translation failed');
+                    }
+
+                    const data = await res.json();
+                    translatedDiv.textContent = data.translated || '';
+                } catch (err) {
+                    translatedDiv.textContent = '';
+                    this.showMessage(`Translation error: ${err.message}`, 'error');
                 }
             }
 
